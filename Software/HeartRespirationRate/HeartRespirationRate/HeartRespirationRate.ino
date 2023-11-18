@@ -69,7 +69,7 @@ void TaskRespirationRate(void *pvParameters)  // This is a task.
   // initialize digital LED_BUILTIN on pin 13 as an output.
   pinMode(LED_BUILTIN, OUTPUT);
   
-  int respirationRate = 1000; // milliseconds
+  int respirationRate = 3000; // milliseconds
   
   // obtenemos la primer referencia temporal
   TickType_t lastWakeupRespirationRate = xTaskGetTickCount();
@@ -93,7 +93,7 @@ void TaskRespirationRate(void *pvParameters)  // This is a task.
 void TaskPulseRate(void *pvParameters)  // This is a task.
 {
   (void) pvParameters;
-  int pulseRate = 300; // milliseconds
+  int pulseRate = 600; // milliseconds
    
   // obtenemos la primer referencia temporal
   TickType_t lastWakeupPulseRate = xTaskGetTickCount();
