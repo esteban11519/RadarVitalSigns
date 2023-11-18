@@ -1,28 +1,35 @@
+#include <Servo.h>
 #include <Arduino_FreeRTOS.h>
 // Include mutex support
 #include <semphr.h>
 
-/*
-   Declaring a global variable of type SemaphoreHandle_t
+#define pinServo 3
 
-*/
+/* Global objects */
+Servo servo;
+// Declaring a global variable of type SemaphoreHandle_t
 SemaphoreHandle_t myMutex;
 
 
-int statusLed = 0;
-// Define tasks
+/* Global variables */
+int servoReference = 90 ; // Grades
+int servoAngle = 15 ;    // Delta/2 grades
 
-// Pulse rate 60 t0 100 beats per minute
-void TaskPulseRate( void *pvParameters );
+// Pulse rate 60 to 100 beats per minute
+int pulseRate = 80; // beats per minute
 // 12 to 16 breaths per minute
+int respirationRate = 14; // breaths per minute
+
+
+/*  Define tasks */
+void TaskPulseRate( void *pvParameters );
 void TaskRespirationRate( void *pvParameters );
 
 // the setup function runs once when you press reset or power the board
 void setup() {
   
   Serial.begin(9600);
-
-  /**
+  /*
        Create a mutex.
        https://www.freertos.org/CreateMutex.html
   */
@@ -30,8 +37,6 @@ void setup() {
   if (myMutex != NULL) {
     Serial.println("Mutex created");
   }
-  
-  // initialize digital LED_BUILTIN on pin 13 as an output.
   
 
   // Now set up two tasks to run independently.
@@ -66,10 +71,10 @@ void loop()
 void TaskRespirationRate(void *pvParameters)  // This is a task.
 {
   (void) pvParameters;
-  // initialize digital LED_BUILTIN on pin 13 as an output.
-  pinMode(LED_BUILTIN, OUTPUT);
+  // Configure servo parameters.
+  servo.attach(pinServo, 500, 2500);
   
-  int respirationRate = 3000; // milliseconds
+  int respirationRatePeriod = 60000/respirationRate; // milliseconds
   
   // obtenemos la primer referencia temporal
   TickType_t lastWakeupRespirationRate = xTaskGetTickCount();
@@ -78,12 +83,12 @@ void TaskRespirationRate(void *pvParameters)  // This is a task.
   for (;;) // A Task shall never return or exit.
   {
     // pdMS_TO_TICKS: Milliseconds to ticks
-    vTaskDelayUntil( &lastWakeupRespirationRate, pdMS_TO_TICKS( respirationRate ) );
+    vTaskDelayUntil( &lastWakeupRespirationRate, pdMS_TO_TICKS( respirationRatePeriod ) );
     
     // Task in Mutex
     xSemaphoreTake(myMutex,portMAX_DELAY);
-    digitalWrite(LED_BUILTIN, statusLed);
-    statusLed = !statusLed;
+    servo.write(servoReference + servoAngle);
+    servoAngle = -servoAngle;
     xSemaphoreGive(myMutex);
     
     
@@ -93,7 +98,7 @@ void TaskRespirationRate(void *pvParameters)  // This is a task.
 void TaskPulseRate(void *pvParameters)  // This is a task.
 {
   (void) pvParameters;
-  int pulseRate = 600; // milliseconds
+  int pulseRatePeriod = 60000/pulseRate; // milliseconds
    
   // obtenemos la primer referencia temporal
   TickType_t lastWakeupPulseRate = xTaskGetTickCount();
@@ -101,12 +106,12 @@ void TaskPulseRate(void *pvParameters)  // This is a task.
 
   for (;;) // A Task shall never return or exit.
   {
-    vTaskDelayUntil( &lastWakeupPulseRate, pdMS_TO_TICKS( pulseRate ) );
+    vTaskDelayUntil( &lastWakeupPulseRate, pdMS_TO_TICKS( pulseRatePeriod ) );
     
     // Task in Mutex
     xSemaphoreTake(myMutex,portMAX_DELAY);
-    digitalWrite(LED_BUILTIN, statusLed);
-    statusLed = !statusLed;
+    servo.write(servoReference + servoAngle);
+    servoAngle = -servoAngle;
     xSemaphoreGive(myMutex);
     
     
@@ -115,6 +120,8 @@ void TaskPulseRate(void *pvParameters)  // This is a task.
 
 // References
 /*
+Theory:
+- https://www.luisllamas.es/como-usar-freertos-en-arduino/
 https://www.hopkinsmedicine.org/health/conditions-and-diseases/vital-signs-body-temperature-pulse-rate-respiration-rate-blood-pressure
 https://www.youtube.com/watch?v=U5Vep8vjcEQ
 https://circuitdigest.com/microcontroller-projects/arduino-freertos-tutorial-using-semaphore-and-mutex-in-freertos-with-arduino
