@@ -1,19 +1,18 @@
 #include <Servo.h>
 #include <Arduino_FreeRTOS.h>
-// Include mutex support
-#include <semphr.h>
 
-#define pinServo 3
-
-/* Global objects */
-Servo servo;
-// Declaring a global variable of type SemaphoreHandle_t
-SemaphoreHandle_t myMutex;
+#define pinServoPulseRate 5
+#define pinServoRespirationRate 6
 
 
 /* Global variables */
+
+Servo servoPulseRate;
+Servo servoRespirationRate;
+
 int servoReference = 90 ; // Grades
-int servoAngle = 15 ;    // Delta/2 grades
+int servoAnglePulseRate = 30 ;    // Delta/2 grades
+int servoAngleRespirationRate = 80 ;    // Delta/2 grades
 
 // Pulse rate 60 to 100 beats per minute
 int pulseRate = 80; // beats per minute
@@ -28,16 +27,6 @@ void TaskRespirationRate( void *pvParameters );
 // the setup function runs once when you press reset or power the board
 void setup() {
   
-  Serial.begin(9600);
-  /*
-       Create a mutex.
-       https://www.freertos.org/CreateMutex.html
-  */
-  myMutex = xSemaphoreCreateMutex();
-  if (myMutex != NULL) {
-    Serial.println("Mutex created");
-  }
-  
 
   // Now set up two tasks to run independently.
   xTaskCreate(
@@ -45,7 +34,7 @@ void setup() {
     ,  "RespirationRate"   // A name just for humans
     ,  128  // This stack size can be checked & adjusted by reading the Stack Highwater
     ,  NULL
-    ,  2  // Priority, with 3 (configMAX_PRIORITIES - 1) being the highest, and 0 being the lowest.
+    ,  1  // Priority, with 3 (configMAX_PRIORITIES - 1) being the highest, and 0 being the lowest.
     ,  NULL );
 
   xTaskCreate(
@@ -72,7 +61,7 @@ void TaskRespirationRate(void *pvParameters)  // This is a task.
 {
   (void) pvParameters;
   // Configure servo parameters.
-  servo.attach(pinServo, 500, 2500);
+  servoRespirationRate.attach(pinServoRespirationRate, 500, 2500);
   
   int respirationRatePeriod = 60000/respirationRate; // milliseconds
   
@@ -85,11 +74,8 @@ void TaskRespirationRate(void *pvParameters)  // This is a task.
     // pdMS_TO_TICKS: Milliseconds to ticks
     vTaskDelayUntil( &lastWakeupRespirationRate, pdMS_TO_TICKS( respirationRatePeriod ) );
     
-    // Task in Mutex
-    xSemaphoreTake(myMutex,portMAX_DELAY);
-    servo.write(servoReference + servoAngle);
-    servoAngle = -servoAngle;
-    xSemaphoreGive(myMutex);
+    servoRespirationRate.write(servoReference + servoAngleRespirationRate);
+    servoAngleRespirationRate = -servoAngleRespirationRate;
     
     
   }
@@ -98,6 +84,9 @@ void TaskRespirationRate(void *pvParameters)  // This is a task.
 void TaskPulseRate(void *pvParameters)  // This is a task.
 {
   (void) pvParameters;
+  // Configure servo parameters.
+  servoPulseRate.attach(pinServoPulseRate, 500, 2500);
+
   int pulseRatePeriod = 60000/pulseRate; // milliseconds
    
   // obtenemos la primer referencia temporal
@@ -108,12 +97,8 @@ void TaskPulseRate(void *pvParameters)  // This is a task.
   {
     vTaskDelayUntil( &lastWakeupPulseRate, pdMS_TO_TICKS( pulseRatePeriod ) );
     
-    // Task in Mutex
-    xSemaphoreTake(myMutex,portMAX_DELAY);
-    servo.write(servoReference + servoAngle);
-    servoAngle = -servoAngle;
-    xSemaphoreGive(myMutex);
-    
+    servoPulseRate.write(servoReference + servoAnglePulseRate);
+    servoAnglePulseRate = -servoAnglePulseRate;
     
   }
 }
