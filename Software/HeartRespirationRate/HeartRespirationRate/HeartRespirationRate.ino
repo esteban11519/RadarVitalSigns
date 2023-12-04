@@ -10,9 +10,11 @@
 Servo servoPulseRate;
 Servo servoRespirationRate;
 
-int servoReference = 90 ; // Grades
-int servoAnglePulseRate = 30 ;    // Delta/2 grades
-int servoAngleRespirationRate = 80 ;    // Delta/2 grades
+int servoReferencePulseRate = 105 ; // Grades
+int servoAnglePulseRate = 3 ;    // Delta/2 grades
+
+int servoReferenceRespirationRate = 83 ; // Grades
+int servoAngleRespirationRate = 63 ;    // Delta/2 grades
 
 // Pulse rate 60 to 100 beats per minute
 int pulseRate = 80; // beats per minute
@@ -74,7 +76,7 @@ void TaskRespirationRate(void *pvParameters)  // This is a task.
     // pdMS_TO_TICKS: Milliseconds to ticks
     vTaskDelayUntil( &lastWakeupRespirationRate, pdMS_TO_TICKS( respirationRatePeriod ) );
     
-    servoRespirationRate.write(servoReference + servoAngleRespirationRate);
+    servoRespirationRate.write(servoReferenceRespirationRate + servoAngleRespirationRate);
     servoAngleRespirationRate = -servoAngleRespirationRate;
     
     
@@ -97,7 +99,7 @@ void TaskPulseRate(void *pvParameters)  // This is a task.
   {
     vTaskDelayUntil( &lastWakeupPulseRate, pdMS_TO_TICKS( pulseRatePeriod ) );
     
-    servoPulseRate.write(servoReference + servoAnglePulseRate);
+    servoPulseRate.write(servoReferencePulseRate + servoAnglePulseRate);
     servoAnglePulseRate = -servoAnglePulseRate;
     
   }
