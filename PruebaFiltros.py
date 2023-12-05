@@ -68,12 +68,14 @@ class PruebaFiltros(gr.top_block, Qt.QWidget):
         ##################################################
         self.samp_rate = samp_rate = 4e3
         self.t = t = 8
+        self.periodos_tiempo = periodos_tiempo = 10
         self.max_fre_vital_signals = max_fre_vital_signals = 100/60
         self.freq_tone = freq_tone = samp_rate/100
         self.window_size = window_size = 2048
         self.variable_0 = variable_0 = freq_tone+max_fre_vital_signals
         self.tx_gain = tx_gain = 34
         self.rx_gain = rx_gain = 43
+        self.n_periodos_tiempo = n_periodos_tiempo = int( np.ceil(  periodos_tiempo*samp_rate/freq_tone ) )
         self.freq = freq = 5.63e9
         self.fft_size = fft_size = min( int(2**np.ceil(np.log2(t*samp_rate))) , 2**15)
         self.decimRate = decimRate = 100
@@ -120,7 +122,7 @@ class PruebaFiltros(gr.top_block, Qt.QWidget):
         self.uhd_usrp_sink_0.set_bandwidth(samp_rate, 0)
         self.uhd_usrp_sink_0.set_gain(tx_gain, 0)
         self.qtgui_time_sink_x_2 = qtgui.time_sink_c(
-            fft_size, #size
+            n_periodos_tiempo, #size
             samp_rate, #samp_rate
             "", #name
             2, #number of inputs
@@ -270,6 +272,7 @@ class PruebaFiltros(gr.top_block, Qt.QWidget):
         self.samp_rate = samp_rate
         self.set_fft_size(min( int(2**np.ceil(np.log2(self.t*self.samp_rate))) , 2**15))
         self.set_freq_tone(self.samp_rate/100)
+        self.set_n_periodos_tiempo(int( np.ceil(  self.periodos_tiempo*self.samp_rate/self.freq_tone ) ))
         self.analog_sig_source_x_0.set_sampling_freq(self.samp_rate)
         self.low_pass_filter_0.set_taps(firdes.low_pass(100, self.samp_rate, (self.max_fre_vital_signals+self.freq_tone), ((self.max_fre_vital_signals+self.freq_tone)/8), window.WIN_HANN, 6.76))
         self.low_pass_filter_0_0.set_taps(firdes.low_pass(1, self.samp_rate, (self.freq_tone+self.max_fre_vital_signals), ((self.freq_tone+self.max_fre_vital_signals)/8), window.WIN_HANN, 6.76))
@@ -286,6 +289,13 @@ class PruebaFiltros(gr.top_block, Qt.QWidget):
         self.t = t
         self.set_fft_size(min( int(2**np.ceil(np.log2(self.t*self.samp_rate))) , 2**15))
 
+    def get_periodos_tiempo(self):
+        return self.periodos_tiempo
+
+    def set_periodos_tiempo(self, periodos_tiempo):
+        self.periodos_tiempo = periodos_tiempo
+        self.set_n_periodos_tiempo(int( np.ceil(  self.periodos_tiempo*self.samp_rate/self.freq_tone ) ))
+
     def get_max_fre_vital_signals(self):
         return self.max_fre_vital_signals
 
@@ -300,6 +310,7 @@ class PruebaFiltros(gr.top_block, Qt.QWidget):
 
     def set_freq_tone(self, freq_tone):
         self.freq_tone = freq_tone
+        self.set_n_periodos_tiempo(int( np.ceil(  self.periodos_tiempo*self.samp_rate/self.freq_tone ) ))
         self.set_variable_0(self.freq_tone+self.max_fre_vital_signals)
         self.analog_sig_source_x_0.set_frequency(self.freq_tone)
         self.low_pass_filter_0.set_taps(firdes.low_pass(100, self.samp_rate, (self.max_fre_vital_signals+self.freq_tone), ((self.max_fre_vital_signals+self.freq_tone)/8), window.WIN_HANN, 6.76))
@@ -330,6 +341,12 @@ class PruebaFiltros(gr.top_block, Qt.QWidget):
     def set_rx_gain(self, rx_gain):
         self.rx_gain = rx_gain
         self.uhd_usrp_source_0.set_gain(self.rx_gain, 0)
+
+    def get_n_periodos_tiempo(self):
+        return self.n_periodos_tiempo
+
+    def set_n_periodos_tiempo(self, n_periodos_tiempo):
+        self.n_periodos_tiempo = n_periodos_tiempo
 
     def get_freq(self):
         return self.freq

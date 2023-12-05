@@ -168,6 +168,30 @@ blocks:
     coordinate: [728, 100.0]
     rotation: 0
     state: true
+- name: n_periodos_tiempo
+  id: variable
+  parameters:
+    comment: ''
+    value: int( np.ceil(  periodos_tiempo*samp_rate/freq_tone ) )
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1016, 108.0]
+    rotation: 0
+    state: true
+- name: periodos_tiempo
+  id: variable
+  parameters:
+    comment: ''
+    value: '10'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1016, 36.0]
+    rotation: 0
+    state: true
 - name: rx_gain
   id: variable_qtgui_range
   parameters:
@@ -867,7 +891,7 @@ blocks:
     marker9: '-1'
     name: '""'
     nconnections: '2'
-    size: fft_size
+    size: n_periodos_tiempo
     srate: samp_rate
     stemplot: 'False'
     style1: '1'
