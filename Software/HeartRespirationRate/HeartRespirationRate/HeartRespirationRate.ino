@@ -11,7 +11,7 @@ Servo servoPulseRate;
 Servo servoRespirationRate;
 
 int servoReferencePulseRate = 105 ; // Grades
-int servoAnglePulseRate = 3 ;    // Delta/2 grades
+int servoAnglePulseRate = 0 ;//3 ;    // Delta/2 grades
 
 int servoReferenceRespirationRate = 83 ; // Grades
 int servoAngleRespirationRate = 63 ;    // Delta/2 grades
@@ -19,7 +19,7 @@ int servoAngleRespirationRate = 63 ;    // Delta/2 grades
 // Pulse rate 60 to 100 beats per minute
 int pulseRate = 80; // beats per minute
 // 12 to 16 breaths per minute
-int respirationRate = 14; // breaths per minute
+int respirationRate = 30; // breaths per minute
 
 
 /*  Define tasks */
@@ -64,7 +64,8 @@ void TaskRespirationRate(void *pvParameters)  // This is a task.
   (void) pvParameters;
   // Configure servo parameters.
   servoRespirationRate.attach(pinServoRespirationRate, 500, 2500);
-  
+  servoRespirationRate.write(servoReferenceRespirationRate - servoAngleRespirationRate);
+
   int respirationRatePeriod = 60000/respirationRate; // milliseconds
   
   // obtenemos la primer referencia temporal
@@ -88,6 +89,7 @@ void TaskPulseRate(void *pvParameters)  // This is a task.
   (void) pvParameters;
   // Configure servo parameters.
   servoPulseRate.attach(pinServoPulseRate, 500, 2500);
+  servoPulseRate.write(servoReferencePulseRate + servoAnglePulseRate);
 
   int pulseRatePeriod = 60000/pulseRate; // milliseconds
    

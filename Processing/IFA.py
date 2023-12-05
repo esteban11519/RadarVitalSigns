@@ -12,8 +12,9 @@ from PyQt5 import Qt
 from gnuradio import qtgui
 from gnuradio import analog
 from gnuradio import blocks
-from gnuradio import gr
+from gnuradio import filter
 from gnuradio.filter import firdes
+from gnuradio import gr
 from gnuradio.fft import window
 import sys
 import signal
@@ -61,11 +62,12 @@ class IFA(gr.top_block, Qt.QWidget):
         ##################################################
         # Variables
         ##################################################
-        self.time = time = 8
+        self.time = time = 1
         self.samp_rate = samp_rate = 4e3
-        self.fft_size = fft_size = min( int(2**np.ceil(np.log2(time*samp_rate))) , 2**15)
-        self.f_r = f_r = 14/60
-        self.f_h = f_h = 80/60
+        self.M = M = 100
+        self.fft_size = fft_size = max( min( int(2**np.ceil(np.log2(time*samp_rate/M))) , 2**15) , 2**10)
+        self.f_r = f_r = 3 #14/60
+        self.f_h = f_h = 2 #80/60
         self.IF = IF = samp_rate/100
         self.A_r = A_r = 1
         self.A_h = A_h = 1e-1
@@ -74,11 +76,16 @@ class IFA(gr.top_block, Qt.QWidget):
         # Blocks
         ##################################################
 
+        self.rational_resampler_xxx_0 = filter.rational_resampler_ccc(
+                interpolation=1,
+                decimation=M,
+                taps=[],
+                fractional_bw=0.4)
         self.qtgui_freq_sink_x_0 = qtgui.freq_sink_c(
             fft_size, #size
             window.WIN_HANN, #wintype
             0, #fc
-            samp_rate, #bw
+            (samp_rate/M), #bw
             "", #name
             1,
             None # parent
@@ -117,11 +124,9 @@ class IFA(gr.top_block, Qt.QWidget):
         self._qtgui_freq_sink_x_0_win = sip.wrapinstance(self.qtgui_freq_sink_x_0.qwidget(), Qt.QWidget)
         self.top_layout.addWidget(self._qtgui_freq_sink_x_0_win)
         self.blocks_throttle2_0 = blocks.throttle( gr.sizeof_gr_complex*1, samp_rate, True, 0 if "auto" == "auto" else max( int(float(0.1) * samp_rate) if "auto" == "time" else int(0.1), 1) )
-        self.blocks_multiply_xx_0 = blocks.multiply_vcc(1)
         self.blocks_add_xx_0 = blocks.add_vcc(1)
-        self.analog_sig_source_x_0_0_0 = analog.sig_source_c(samp_rate, analog.GR_SIN_WAVE, IF, 1, 0, 0)
-        self.analog_sig_source_x_0_0 = analog.sig_source_c(samp_rate, analog.GR_SIN_WAVE, 3, A_h, 0, 0)
-        self.analog_sig_source_x_0 = analog.sig_source_c(samp_rate, analog.GR_SIN_WAVE, 7, A_r, 0, 0)
+        self.analog_sig_source_x_0_0 = analog.sig_source_c(samp_rate, analog.GR_SIN_WAVE, f_h, A_h, 0, 0)
+        self.analog_sig_source_x_0 = analog.sig_source_c(samp_rate, analog.GR_SIN_WAVE, f_r, A_r, 0, 0)
 
 
         ##################################################
@@ -129,10 +134,9 @@ class IFA(gr.top_block, Qt.QWidget):
         ##################################################
         self.connect((self.analog_sig_source_x_0, 0), (self.blocks_add_xx_0, 0))
         self.connect((self.analog_sig_source_x_0_0, 0), (self.blocks_add_xx_0, 1))
-        self.connect((self.analog_sig_source_x_0_0_0, 0), (self.blocks_multiply_xx_0, 1))
-        self.connect((self.blocks_add_xx_0, 0), (self.blocks_multiply_xx_0, 0))
-        self.connect((self.blocks_multiply_xx_0, 0), (self.blocks_throttle2_0, 0))
+        self.connect((self.blocks_add_xx_0, 0), (self.rational_resampler_xxx_0, 0))
         self.connect((self.blocks_throttle2_0, 0), (self.qtgui_freq_sink_x_0, 0))
+        self.connect((self.rational_resampler_xxx_0, 0), (self.blocks_throttle2_0, 0))
 
 
     def closeEvent(self, event):
@@ -148,7 +152,7 @@ class IFA(gr.top_block, Qt.QWidget):
 
     def set_time(self, time):
         self.time = time
-        self.set_fft_size(min( int(2**np.ceil(np.log2(self.time*self.samp_rate))) , 2**15))
+        self.set_fft_size(max( min( int(2**np.ceil(np.log2(self.time*self.samp_rate/self.M))) , 2**15) , 2**10))
 
     def get_samp_rate(self):
         return self.samp_rate
@@ -156,12 +160,19 @@ class IFA(gr.top_block, Qt.QWidget):
     def set_samp_rate(self, samp_rate):
         self.samp_rate = samp_rate
         self.set_IF(self.samp_rate/100)
-        self.set_fft_size(min( int(2**np.ceil(np.log2(self.time*self.samp_rate))) , 2**15))
+        self.set_fft_size(max( min( int(2**np.ceil(np.log2(self.time*self.samp_rate/self.M))) , 2**15) , 2**10))
         self.analog_sig_source_x_0.set_sampling_freq(self.samp_rate)
         self.analog_sig_source_x_0_0.set_sampling_freq(self.samp_rate)
-        self.analog_sig_source_x_0_0_0.set_sampling_freq(self.samp_rate)
         self.blocks_throttle2_0.set_sample_rate(self.samp_rate)
-        self.qtgui_freq_sink_x_0.set_frequency_range(0, self.samp_rate)
+        self.qtgui_freq_sink_x_0.set_frequency_range(0, (self.samp_rate/self.M))
+
+    def get_M(self):
+        return self.M
+
+    def set_M(self, M):
+        self.M = M
+        self.set_fft_size(max( min( int(2**np.ceil(np.log2(self.time*self.samp_rate/self.M))) , 2**15) , 2**10))
+        self.qtgui_freq_sink_x_0.set_frequency_range(0, (self.samp_rate/self.M))
 
     def get_fft_size(self):
         return self.fft_size
@@ -174,19 +185,20 @@ class IFA(gr.top_block, Qt.QWidget):
 
     def set_f_r(self, f_r):
         self.f_r = f_r
+        self.analog_sig_source_x_0.set_frequency(self.f_r)
 
     def get_f_h(self):
         return self.f_h
 
     def set_f_h(self, f_h):
         self.f_h = f_h
+        self.analog_sig_source_x_0_0.set_frequency(self.f_h)
 
     def get_IF(self):
         return self.IF
 
     def set_IF(self, IF):
         self.IF = IF
-        self.analog_sig_source_x_0_0_0.set_frequency(self.IF)
 
     def get_A_r(self):
         return self.A_r
