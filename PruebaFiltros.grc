@@ -33,6 +33,18 @@ options:
     state: enabled
 
 blocks:
+- name: M
+  id: variable
+  parameters:
+    comment: ''
+    value: '100'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [304, 84.0]
+    rotation: 0
+    state: true
 - name: amplitude
   id: variable
   parameters:
@@ -49,7 +61,7 @@ blocks:
   id: variable
   parameters:
     comment: "Techo de la\npotencia m\xE1s\ncercana\no L\xEDmite"
-    value: min( int(2**np.ceil(np.log2(t*samp_rate))) , 2**15)
+    value: '1024'
   states:
     bus_sink: false
     bus_source: false
@@ -190,7 +202,7 @@ blocks:
   id: variable
   parameters:
     comment: ''
-    value: 1e3
+    value: 400e3
   states:
     bus_sink: false
     bus_source: false
@@ -268,7 +280,7 @@ blocks:
     low_cutoff_freq: min_res_rat
     maxoutbuf: '0'
     minoutbuf: '0'
-    samp_rate: samp_rate
+    samp_rate: samp_rate/M
     type: fir_filter_fff
     width: min(min_res_rat, max_res_rat)/8
     win: window.WIN_HANN
@@ -293,7 +305,7 @@ blocks:
     low_cutoff_freq: min_hea_rat
     maxoutbuf: '0'
     minoutbuf: '0'
-    samp_rate: samp_rate
+    samp_rate: samp_rate/M
     type: fir_filter_fff
     width: min(min_hea_rat, max_hea_rat)/8
     win: window.WIN_HANN
@@ -317,7 +329,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1072, 552.0]
+    coordinate: [1240, 552.0]
     rotation: 0
     state: true
 - name: blocks_multiply_conjugate_cc_1
@@ -568,7 +580,7 @@ blocks:
     autoscale: 'False'
     average: '1.0'
     axislabels: 'True'
-    bw: samp_rate
+    bw: samp_rate/M
     color1: '"blue"'
     color10: '"dark blue"'
     color2: '"red"'
@@ -888,6 +900,26 @@ blocks:
     bus_source: false
     bus_structure: null
     coordinate: [272, 852.0]
+    rotation: 0
+    state: true
+- name: rational_resampler_xxx_0
+  id: rational_resampler_xxx
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    decim: M
+    fbw: '0'
+    interp: '1'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    taps: '[]'
+    type: ccc
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1040, 524.0]
     rotation: 0
     state: true
 - name: uhd_usrp_sink_0
@@ -1626,7 +1658,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1248, 548.0]
+    coordinate: [1416, 548.0]
     rotation: 0
     state: true
 - name: virtual_sink_2
@@ -1753,12 +1785,13 @@ connections:
 - [band_pass_filter_0, '0', qtgui_freq_sink_x_0_1, '0']
 - [band_pass_filter_0_0, '0', qtgui_freq_sink_x_0_1, '1']
 - [blocks_complex_to_arg_1, '0', virtual_sink_1, '0']
-- [blocks_multiply_conjugate_cc_1, '0', blocks_complex_to_arg_1, '0']
+- [blocks_multiply_conjugate_cc_1, '0', rational_resampler_xxx_0, '0']
 - [blocks_stream_to_vector_0, '0', epy_block_0, '0']
 - [blocks_vector_to_stream_0, '0', qtgui_freq_sink_x_0, '0']
 - [epy_block_0, '0', blocks_vector_to_stream_0, '0']
 - [low_pass_filter_0, '0', blocks_multiply_conjugate_cc_1, '0']
 - [low_pass_filter_0, '0', virtual_sink_2, '0']
+- [rational_resampler_xxx_0, '0', blocks_complex_to_arg_1, '0']
 - [uhd_usrp_source_0, '0', low_pass_filter_0, '0']
 - [virtual_source_0, '0', blocks_multiply_conjugate_cc_1, '1']
 - [virtual_source_0_0, '0', qtgui_time_sink_x_2, '1']

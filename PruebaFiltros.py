@@ -66,21 +66,22 @@ class PruebaFiltros(gr.top_block, Qt.QWidget):
         ##################################################
         # Variables
         ##################################################
-        self.samp_rate = samp_rate = 1e3
-        self.min_res_rat = min_res_rat = 8/60
-        self.t = t = 1/min_res_rat
+        self.samp_rate = samp_rate = 400e3
         self.periodos_tiempo = periodos_tiempo = 10
+        self.min_res_rat = min_res_rat = 8/60
         self.max_res_rat = max_res_rat = 20/60
         self.max_hea_rat = max_hea_rat = 100/60
         self.freq_tone = freq_tone = samp_rate/100
         self.tx_gain = tx_gain = 43
+        self.t = t = 1/min_res_rat
         self.rx_gain = rx_gain = 42
         self.n_periodos_tiempo = n_periodos_tiempo = int( np.ceil(  periodos_tiempo*samp_rate/freq_tone ) )
         self.min_hea_rat = min_hea_rat = 60/60
         self.max_fre_vital_signals = max_fre_vital_signals = max( max_hea_rat, max_res_rat)
         self.freq = freq = 5.63e9
-        self.fft_size = fft_size = min( int(2**np.ceil(np.log2(t*samp_rate))) , 2**15)
+        self.fft_size = fft_size = 1024
         self.amplitude = amplitude = 900e-3
+        self.M = M = 100
 
         ##################################################
         # Blocks
@@ -122,6 +123,11 @@ class PruebaFiltros(gr.top_block, Qt.QWidget):
         self.uhd_usrp_sink_0.set_antenna("TX/RX", 0)
         self.uhd_usrp_sink_0.set_bandwidth(samp_rate, 0)
         self.uhd_usrp_sink_0.set_gain(tx_gain, 0)
+        self.rational_resampler_xxx_0 = filter.rational_resampler_ccc(
+                interpolation=1,
+                decimation=M,
+                taps=[],
+                fractional_bw=0)
         self.qtgui_time_sink_x_2 = qtgui.time_sink_c(
             n_periodos_tiempo, #size
             samp_rate, #samp_rate
@@ -266,7 +272,7 @@ class PruebaFiltros(gr.top_block, Qt.QWidget):
             fft_size, #size
             window.WIN_HANN, #wintype
             0, #fc
-            samp_rate, #bw
+            (samp_rate/M), #bw
             "Phase Frequency Respiration and Heart", #name
             2,
             None # parent
@@ -320,7 +326,7 @@ class PruebaFiltros(gr.top_block, Qt.QWidget):
             1,
             firdes.band_pass(
                 1,
-                samp_rate,
+                (samp_rate/M),
                 min_hea_rat,
                 max_hea_rat,
                 (min(min_hea_rat, max_hea_rat)/8),
@@ -330,7 +336,7 @@ class PruebaFiltros(gr.top_block, Qt.QWidget):
             1,
             firdes.band_pass(
                 1,
-                samp_rate,
+                (samp_rate/M),
                 min_res_rat,
                 max_res_rat,
                 (min(min_res_rat, max_res_rat)/8),
@@ -351,10 +357,11 @@ class PruebaFiltros(gr.top_block, Qt.QWidget):
         self.connect((self.blocks_complex_to_arg_1, 0), (self.band_pass_filter_0, 0))
         self.connect((self.blocks_complex_to_arg_1, 0), (self.band_pass_filter_0_0, 0))
         self.connect((self.blocks_complex_to_arg_1, 0), (self.qtgui_freq_sink_x_0_1_0_0, 0))
-        self.connect((self.blocks_multiply_conjugate_cc_1, 0), (self.blocks_complex_to_arg_1, 0))
+        self.connect((self.blocks_multiply_conjugate_cc_1, 0), (self.rational_resampler_xxx_0, 0))
         self.connect((self.low_pass_filter_0, 0), (self.blocks_multiply_conjugate_cc_1, 0))
         self.connect((self.low_pass_filter_0, 0), (self.qtgui_freq_sink_x_0_1_0_0_0, 0))
         self.connect((self.low_pass_filter_0, 0), (self.qtgui_time_sink_x_2, 0))
+        self.connect((self.rational_resampler_xxx_0, 0), (self.blocks_complex_to_arg_1, 0))
         self.connect((self.uhd_usrp_source_0, 0), (self.low_pass_filter_0, 0))
 
 
@@ -371,35 +378,19 @@ class PruebaFiltros(gr.top_block, Qt.QWidget):
 
     def set_samp_rate(self, samp_rate):
         self.samp_rate = samp_rate
-        self.set_fft_size(min( int(2**np.ceil(np.log2(self.t*self.samp_rate))) , 2**15))
         self.set_freq_tone(self.samp_rate/100)
         self.set_n_periodos_tiempo(int( np.ceil(  self.periodos_tiempo*self.samp_rate/self.freq_tone ) ))
         self.analog_sig_source_x_0.set_sampling_freq(self.samp_rate)
-        self.band_pass_filter_0.set_taps(firdes.band_pass(1, self.samp_rate, self.min_res_rat, self.max_res_rat, (min(self.min_res_rat, self.max_res_rat)/8), window.WIN_HANN, 6.76))
-        self.band_pass_filter_0_0.set_taps(firdes.band_pass(1, self.samp_rate, self.min_hea_rat, self.max_hea_rat, (min(self.min_hea_rat, self.max_hea_rat)/8), window.WIN_HANN, 6.76))
+        self.band_pass_filter_0.set_taps(firdes.band_pass(1, (self.samp_rate/self.M), self.min_res_rat, self.max_res_rat, (min(self.min_res_rat, self.max_res_rat)/8), window.WIN_HANN, 6.76))
+        self.band_pass_filter_0_0.set_taps(firdes.band_pass(1, (self.samp_rate/self.M), self.min_hea_rat, self.max_hea_rat, (min(self.min_hea_rat, self.max_hea_rat)/8), window.WIN_HANN, 6.76))
         self.low_pass_filter_0.set_taps(firdes.low_pass(100, self.samp_rate, (self.max_fre_vital_signals+self.freq_tone), ((self.max_fre_vital_signals+self.freq_tone)/8), window.WIN_HANN, 6.76))
-        self.qtgui_freq_sink_x_0_1.set_frequency_range(0, self.samp_rate)
+        self.qtgui_freq_sink_x_0_1.set_frequency_range(0, (self.samp_rate/self.M))
         self.qtgui_freq_sink_x_0_1_0_0.set_frequency_range(0, self.samp_rate)
         self.qtgui_freq_sink_x_0_1_0_0_0.set_frequency_range(0, self.samp_rate)
         self.qtgui_time_sink_x_2.set_samp_rate(self.samp_rate)
         self.uhd_usrp_sink_0.set_samp_rate(self.samp_rate)
         self.uhd_usrp_sink_0.set_bandwidth(self.samp_rate, 0)
         self.uhd_usrp_source_0.set_samp_rate(self.samp_rate)
-
-    def get_min_res_rat(self):
-        return self.min_res_rat
-
-    def set_min_res_rat(self, min_res_rat):
-        self.min_res_rat = min_res_rat
-        self.set_t(1/self.min_res_rat)
-        self.band_pass_filter_0.set_taps(firdes.band_pass(1, self.samp_rate, self.min_res_rat, self.max_res_rat, (min(self.min_res_rat, self.max_res_rat)/8), window.WIN_HANN, 6.76))
-
-    def get_t(self):
-        return self.t
-
-    def set_t(self, t):
-        self.t = t
-        self.set_fft_size(min( int(2**np.ceil(np.log2(self.t*self.samp_rate))) , 2**15))
 
     def get_periodos_tiempo(self):
         return self.periodos_tiempo
@@ -408,13 +399,21 @@ class PruebaFiltros(gr.top_block, Qt.QWidget):
         self.periodos_tiempo = periodos_tiempo
         self.set_n_periodos_tiempo(int( np.ceil(  self.periodos_tiempo*self.samp_rate/self.freq_tone ) ))
 
+    def get_min_res_rat(self):
+        return self.min_res_rat
+
+    def set_min_res_rat(self, min_res_rat):
+        self.min_res_rat = min_res_rat
+        self.set_t(1/self.min_res_rat)
+        self.band_pass_filter_0.set_taps(firdes.band_pass(1, (self.samp_rate/self.M), self.min_res_rat, self.max_res_rat, (min(self.min_res_rat, self.max_res_rat)/8), window.WIN_HANN, 6.76))
+
     def get_max_res_rat(self):
         return self.max_res_rat
 
     def set_max_res_rat(self, max_res_rat):
         self.max_res_rat = max_res_rat
         self.set_max_fre_vital_signals(max( self.max_hea_rat, self.max_res_rat))
-        self.band_pass_filter_0.set_taps(firdes.band_pass(1, self.samp_rate, self.min_res_rat, self.max_res_rat, (min(self.min_res_rat, self.max_res_rat)/8), window.WIN_HANN, 6.76))
+        self.band_pass_filter_0.set_taps(firdes.band_pass(1, (self.samp_rate/self.M), self.min_res_rat, self.max_res_rat, (min(self.min_res_rat, self.max_res_rat)/8), window.WIN_HANN, 6.76))
 
     def get_max_hea_rat(self):
         return self.max_hea_rat
@@ -422,7 +421,7 @@ class PruebaFiltros(gr.top_block, Qt.QWidget):
     def set_max_hea_rat(self, max_hea_rat):
         self.max_hea_rat = max_hea_rat
         self.set_max_fre_vital_signals(max( self.max_hea_rat, self.max_res_rat))
-        self.band_pass_filter_0_0.set_taps(firdes.band_pass(1, self.samp_rate, self.min_hea_rat, self.max_hea_rat, (min(self.min_hea_rat, self.max_hea_rat)/8), window.WIN_HANN, 6.76))
+        self.band_pass_filter_0_0.set_taps(firdes.band_pass(1, (self.samp_rate/self.M), self.min_hea_rat, self.max_hea_rat, (min(self.min_hea_rat, self.max_hea_rat)/8), window.WIN_HANN, 6.76))
 
     def get_freq_tone(self):
         return self.freq_tone
@@ -439,6 +438,12 @@ class PruebaFiltros(gr.top_block, Qt.QWidget):
     def set_tx_gain(self, tx_gain):
         self.tx_gain = tx_gain
         self.uhd_usrp_sink_0.set_gain(self.tx_gain, 0)
+
+    def get_t(self):
+        return self.t
+
+    def set_t(self, t):
+        self.t = t
 
     def get_rx_gain(self):
         return self.rx_gain
@@ -458,7 +463,7 @@ class PruebaFiltros(gr.top_block, Qt.QWidget):
 
     def set_min_hea_rat(self, min_hea_rat):
         self.min_hea_rat = min_hea_rat
-        self.band_pass_filter_0_0.set_taps(firdes.band_pass(1, self.samp_rate, self.min_hea_rat, self.max_hea_rat, (min(self.min_hea_rat, self.max_hea_rat)/8), window.WIN_HANN, 6.76))
+        self.band_pass_filter_0_0.set_taps(firdes.band_pass(1, (self.samp_rate/self.M), self.min_hea_rat, self.max_hea_rat, (min(self.min_hea_rat, self.max_hea_rat)/8), window.WIN_HANN, 6.76))
 
     def get_max_fre_vital_signals(self):
         return self.max_fre_vital_signals
@@ -486,6 +491,15 @@ class PruebaFiltros(gr.top_block, Qt.QWidget):
 
     def set_amplitude(self, amplitude):
         self.amplitude = amplitude
+
+    def get_M(self):
+        return self.M
+
+    def set_M(self, M):
+        self.M = M
+        self.band_pass_filter_0.set_taps(firdes.band_pass(1, (self.samp_rate/self.M), self.min_res_rat, self.max_res_rat, (min(self.min_res_rat, self.max_res_rat)/8), window.WIN_HANN, 6.76))
+        self.band_pass_filter_0_0.set_taps(firdes.band_pass(1, (self.samp_rate/self.M), self.min_hea_rat, self.max_hea_rat, (min(self.min_hea_rat, self.max_hea_rat)/8), window.WIN_HANN, 6.76))
+        self.qtgui_freq_sink_x_0_1.set_frequency_range(0, (self.samp_rate/self.M))
 
 
 
