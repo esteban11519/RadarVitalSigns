@@ -11,7 +11,7 @@ Servo servoPulseRate;
 Servo servoRespirationRate;
 
 int servoReferencePulseRate = 105 ; // Grades
-int servoAnglePulseRate = 0 ;//3 ;    // Delta/2 grades
+int servoAnglePulseRate = 3 ;    // Delta/2 grades
 
 int servoReferenceRespirationRate = 83 ; // Grades
 int servoAngleRespirationRate = 63 ;    // Delta/2 grades
@@ -19,7 +19,7 @@ int servoAngleRespirationRate = 63 ;    // Delta/2 grades
 // Pulse rate 60 to 100 beats per minute
 int pulseRate = 80; // beats per minute
 // 12 to 16 breaths per minute
-int respirationRate = 30; // breaths per minute
+int respirationRate = 14; // breaths per minute
 
 
 /*  Define tasks */
